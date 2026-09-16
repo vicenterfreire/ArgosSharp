@@ -1,0 +1,14 @@
+﻿using ArgosSharp.Application.Contracts.Jobs;
+using FluentValidation;
+
+namespace ArgosSharp.Api.Validators
+{
+    internal class CreateJobValidator : AbstractValidator<CreateJobRequest>
+    {
+        internal CreateJobValidator()
+        {
+            RuleFor(x => x.Parameters)
+                .NotNull().WithMessage("Parameters are required.");
+        }
+    }
+}

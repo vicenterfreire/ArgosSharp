@@ -1,0 +1,30 @@
+﻿using ArgosSharp.Application.Contracts.Jobs;
+using ArgosSharp.Application.Interfaces.Repositories;
+using ArgosSharp.Domain.Entity;
+using ArgosSharp.Domain.Factories.JobFactory;
+
+namespace ArgosSharp.Application.UseCase.Jobs.CreateJob
+{
+    public class CreateJobUseCase(
+        IJobFactory jobFactory,
+        IJobRepository jobRepository
+    ) : ICreateJobUseCase
+    {
+        /// <inheritdoc cref="ICreateJobUseCase"/>
+        public async Task<Job> CreateJob(CreateJobRequest createJobRequest)
+        {
+            // Criar Job
+            var job = jobFactory.Create(
+                createJobRequest.Name,
+                createJobRequest.JobType,
+                createJobRequest.Parameters,
+                createJobRequest.Priority,
+                createJobRequest.Enabled
+            );
+            // Persistir Job
+            await jobRepository.AddAsync(job);
+            // Retornar resposta
+            return job;
+        }
+    }
+}

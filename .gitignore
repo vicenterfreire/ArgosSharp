@@ -365,5 +365,14 @@ FodyWeavers.xsd
 TestResult
 coverage
 /api
-/docs
 /_site
+**/*/.env
+*.db
+*.db-shm
+*.db-wal
+*.zip
+diff.txt
+Migrations/*
+**/*/.terraform/*
+**/*/.terraform.lock.hcl
+dump.txt
