@@ -1,6 +1,6 @@
 ﻿using ArgosSharp.Application.Interfaces.Fetcher;
 using ArgosSharp.Application.Interfaces.Parser;
-using ArgosSharp.Infrastructure.Strategies.Scrapers;
+using ArgosSharp.Infrastructure.Scrapers.NewsArticles;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
