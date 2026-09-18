@@ -19,8 +19,8 @@ namespace ArgosSharp.Infrastructure.Repositories
             await argosDbContext.SaveChangesAsync();
         }
 
-        public async Task<Job?> GetAsync(int Id) =>
-            await argosDbContext.Jobs.FirstOrDefaultAsync(x => x.Id == Id);
+        public async Task<Job?> GetAsync(int id) =>
+            await argosDbContext.Jobs.FirstOrDefaultAsync(x => x.Id == id);
 
         public async Task<List<Job>> GetAllAsync() =>
             await argosDbContext.Jobs.ToListAsync();

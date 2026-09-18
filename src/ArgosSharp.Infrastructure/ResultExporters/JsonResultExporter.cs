@@ -8,19 +8,17 @@ namespace ArgosSharp.Infrastructure.ResultExporters
 {
     internal class JsonResultExporter : IResultExporter
     {
+        private const string Extension = ".json";
+        private const string ContentType = "application/json";
+        
         public bool CanHandle(ExportFormat format) => format == ExportFormat.JSON;
+        
         public Task<ResultExport> Export(JobExecutionResult result)
         {
             var json = JsonSerializer.Serialize(result.Data);
             var bytes = Encoding.UTF8.GetBytes(json);
             var stream = new MemoryStream(bytes);
-            return Task.FromResult(new ResultExport
-            { 
-                Content = stream,
-                FileName = "export.json",
-                ContentType = "application/json",
-                Extension = ".json"
-            });
+            return Task.FromResult(new ResultExport(Content:stream, FileName:"export.json", ContentType:ContentType, Extension: Extension));
         }
     }
 }

@@ -3,13 +3,13 @@ using ArgosSharp.Application.Interfaces.Parser;
 using ArgosSharp.Application.Interfaces.Scrapers;
 using ArgosSharp.Domain.ValueObjects;
 using ArgosSharp.Infrastructure.Mapper;
-using ArgosSharp.Infrastructure.Utils;
+using ArgosSharp.Infrastructure.Extractor;
 using Microsoft.Extensions.Logging;
 using System.Net;
 
 namespace ArgosSharp.Infrastructure.Scrapers.NewsArticles
 {
-    public class SaoSebastiaoScraper(ILogger<SaoSebastiaoScraper> _logger, IHttpFetcher _fetcher, IHtmlParser _parser) : INewsArticlesScrapers
+    public class SaoSebastiaoScraper(ILogger<SaoSebastiaoScraper> logger, IHttpFetcher fetcher, IHtmlParser parser) : INewsArticlesScrapers
     {
         public string Name { get; set; } = "sao_sebastiao";
 
@@ -31,34 +31,34 @@ namespace ArgosSharp.Infrastructure.Scrapers.NewsArticles
             var news = new List<string>();
             var termParsed = WebUtility.UrlEncode(searchTerm);
 
-            _logger.LogInformation("Initianting data gettering using term {SearchTerm} in São Sebastião", searchTerm);
+            logger.LogInformation("Initianting data gettering using term {SearchTerm} in São Sebastião", searchTerm);
 
-            var html = await _fetcher.GetStringAsync($"{BaseSearch}{termParsed}");
+            var html = await fetcher.GetStringAsync($"{BaseSearch}{termParsed}");
             var maxPage = GetPaginationIfExists(html);
             var limit = Math.Min(maxPage, depth);
 
             news.AddRange(GetNewsIfExists(html));
             news.AddRange(await GetNewsFromPagination(termParsed, limit));
 
-            return [.. news.Select(x => NewsMapper.Map(x, _parser, Selectors, Name))];
+            return [.. news.Select(x => NewsMapper.Map(x, parser, Selectors, Name))];
         }
 
         private int GetPaginationIfExists(string html)
         {
-            var pagination = _parser.QueryTexts(html, Selectors.Pagination).ToList();
+            var pagination = parser.QueryTexts(html, Selectors.Pagination).ToList();
 
             var maxPage = PaginationExtractor.GetMaxPage(pagination);
             
-            _logger.LogInformation("Found {PageQuantity} pages to scrape", maxPage);
+            logger.LogInformation("Found {PageQuantity} pages to scrape", maxPage);
             
             return maxPage;
         }
 
         private List<string> GetNewsIfExists(string document)
         {
-            var news = _parser.QueryTexts(document, Selectors.News).ToList();
+            var news = parser.QueryTexts(document, Selectors.News).ToList();
 
-            _logger.LogInformation("Found {NewsCount} news", news.Count);
+            logger.LogInformation("Found {NewsCount} news", news.Count);
             
             return news;
         }
@@ -68,7 +68,7 @@ namespace ArgosSharp.Infrastructure.Scrapers.NewsArticles
             List<string> newsRaw = [];
             for (var i = 2; i <= maxPage; i++)
             {
-                var html = await _fetcher.GetStringAsync($"{BaseSearch}{term}&pg={i}");
+                var html = await fetcher.GetStringAsync($"{BaseSearch}{term}&pg={i}");
                 var news = GetNewsIfExists(html);
                 if (news.Count > 0)
                     newsRaw.AddRange(news);

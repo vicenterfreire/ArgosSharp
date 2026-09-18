@@ -376,3 +376,4 @@ Migrations/*
 **/*/.terraform/*
 **/*/.terraform.lock.hcl
 dump.txt
+.idea/

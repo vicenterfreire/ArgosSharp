@@ -9,6 +9,9 @@ namespace ArgosSharp.Infrastructure.ResultExporters
 {
     internal class CSVResultExporter : IResultExporter
     {
+        private const string Extension = ".csv";
+        private const string ContentType = "csv";
+        
         public bool CanHandle(ExportFormat format) => format == ExportFormat.CSV;
 
         public Task<ResultExport> Export(JobExecutionResult result)
@@ -21,13 +24,7 @@ namespace ArgosSharp.Infrastructure.ResultExporters
             var bytes = Encoding.UTF8.GetBytes(writer.ToString());
             var stream = new MemoryStream(bytes);
 
-            return Task.FromResult(new ResultExport
-            { 
-                Content = stream,
-                FileName = "export.csv",
-                ContentType = "csv",
-                Extension = ".csv"
-            });
+            return Task.FromResult(new ResultExport(Content: stream,FileName: "export.csv",ContentType: ContentType,Extension: Extension));
         }
     }
 }

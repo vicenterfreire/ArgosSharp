@@ -1,4 +1,4 @@
-﻿using ArgosSharp.Domain.Factories.JobExecutionFactory.cs;
+﻿using ArgosSharp.Domain.Factories.JobExecutionFactory;
 using ArgosSharp.Domain.Factories.JobFactory;
 using Microsoft.Extensions.DependencyInjection;
 

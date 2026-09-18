@@ -2,7 +2,7 @@
 using ArgosSharp.Application.Interfaces.Parser;
 using Microsoft.Extensions.Logging;
 
-namespace ArgosSharp.Infrastructure.Utils
+namespace ArgosSharp.Infrastructure.Extractor
 {
     public static class PaginationExtractor
     {
@@ -21,7 +21,7 @@ namespace ArgosSharp.Infrastructure.Utils
                 .Select(x => x!.Value)
                 .ToList();
 
-            return numbers!.Any() ? numbers!.Max() : 1;
+            return numbers!.Count > 1 ? numbers!.Max() : 1;
         }
     }
 }

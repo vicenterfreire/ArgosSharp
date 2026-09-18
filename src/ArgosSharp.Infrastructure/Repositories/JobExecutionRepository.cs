@@ -1,6 +1,5 @@
 ﻿using ArgosSharp.Application.Interfaces.Repositories;
 using ArgosSharp.Domain.Entity;
-using ArgosSharp.Domain.Enums;
 using ArgosSharp.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,35 +19,8 @@ namespace ArgosSharp.Infrastructure.Repositories
             await argosDbContext.SaveChangesAsync();
         }
 
-        public async Task EnqueuedAsync(JobExecution job)
-        {
-            job.JobStatus = JobStatusEnum.Enqueued;
-            await UpdateAsync(job);
-        }
-
-        public async Task CompleteAsync(JobExecution job)
-        {
-            job.FinishedAt = DateTime.Now;
-            job.JobStatus = JobStatusEnum.Completed;
-            await UpdateAsync(job);
-        }
-
-        public async Task FailAsync(JobExecution job)
-        {
-            job.FinishedAt = DateTime.Now;
-            job.JobStatus = JobStatusEnum.Failed;
-            await UpdateAsync(job);
-        }
-
-        public async Task ProcessingAsync(JobExecution job)
-        {
-            job.StartedAt = DateTime.Now;
-            job.JobStatus = JobStatusEnum.Processing;
-            await UpdateAsync(job);
-        }
-
-        public async Task<JobExecution?> GetAsync(int Id) =>
-            await argosDbContext.JobExecutions.FirstOrDefaultAsync(x => x.Id == Id);
+        public async Task<JobExecution?> GetAsync(int id) =>
+            await argosDbContext.JobExecutions.FirstOrDefaultAsync(x => x.Id == id);
 
         public async Task<List<JobExecution>> GetAllAsync() =>
             await argosDbContext.JobExecutions.ToListAsync();

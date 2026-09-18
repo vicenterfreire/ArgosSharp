@@ -4,7 +4,7 @@ namespace ArgosSharp.Infrastructure.Http.Fetcher
 {
     public class HttpClientFetcher(HttpClient httpClient) : IHttpFetcher
     {
-        /// <inheritdoc cref="IHttpFetcher">
+        /// <inheritdoc cref="IHttpFetcher" />
         public async Task<string> GetStringAsync(string url)
         {
             var response = await httpClient.GetAsync(url);

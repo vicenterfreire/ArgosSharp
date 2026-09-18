@@ -2,7 +2,7 @@
 using ArgosSharp.Domain.ValueObjects;
 
 
-namespace ArgosSharp.Domain.Factories.JobExecutionFactory.cs
+namespace ArgosSharp.Domain.Factories.JobExecutionFactory
 {
     public interface IJobExecutionFactory
     {

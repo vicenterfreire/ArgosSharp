@@ -13,6 +13,11 @@
 
         public Artifact(int jobExecId, string fileName, string contentType, long size, string storagePath)
         {
+            ArgumentNullException.ThrowIfNullOrEmpty(nameof(fileName));
+            ArgumentNullException.ThrowIfNullOrEmpty(nameof(contentType));
+            ArgumentNullException.ThrowIfNullOrEmpty(nameof(storagePath));
+            ArgumentOutOfRangeException.ThrowIfLessThan(1, size, nameof(size));
+            
             JobExecutionId = jobExecId;
             FileName = fileName;
             ContentType = contentType;

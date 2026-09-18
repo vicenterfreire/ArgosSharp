@@ -7,7 +7,7 @@ namespace ArgosSharp.Infrastructure.Mapper
     public static class NewsMapper
     {
         /// <summary>
-        /// Maps HTML content to a Noticia object by extracting relevant fields using the provided
+        /// Maps HTML content to a News object by extracting relevant fields using the provided
         /// HTML parser and CSS selectors. Parses the date field in "dd/MM/yyyy" format and extracts
         /// title, date, link, abstract, and source. Missing title defaults to "No title" and
         /// missing link defaults to "No link".

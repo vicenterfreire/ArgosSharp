@@ -2,8 +2,7 @@
 using ArgosSharp.Application.Interfaces.Repositories;
 using ArgosSharp.Application.Services.JobExecutionQueue;
 using ArgosSharp.Domain.Entity;
-using ArgosSharp.Domain.Factories.JobExecutionFactory.cs;
-using ArgosSharp.Domain.ValueObjects;
+using ArgosSharp.Domain.Factories.JobExecutionFactory;
 
 namespace ArgosSharp.Application.UseCase.JobsExecution.CreateJobExecution
 {
@@ -18,7 +17,10 @@ namespace ArgosSharp.Application.UseCase.JobsExecution.CreateJobExecution
             var execution = jobExecutionFactory.Create(createJobExecutionRequest.JobId, createJobExecutionRequest.Parameters);
             await jobExecutionRepository.AddAsync(execution);
             await jobQueue.EnqueueAsync(execution);
-            await jobExecutionRepository.EnqueuedAsync(execution);
+            
+            execution.Enqueued();
+            await jobExecutionRepository.UpdateAsync(execution);
+            
             return execution;
         }
     }

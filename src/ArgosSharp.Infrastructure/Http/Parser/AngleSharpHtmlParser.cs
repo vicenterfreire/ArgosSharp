@@ -5,19 +5,19 @@ namespace ArgosSharp.Infrastructure.Http.Parser
 {
     public class AngleSharpHtmlParser : ArgoSharp.IHtmlParser
     {
-        private readonly HtmlParser htmlParser = new();
+        private readonly HtmlParser _htmlParser = new();
 
-        /// <inheritdoc cref="ArgoSharp.IHtmlParser">
+        /// <inheritdoc cref="ArgoSharp.IHtmlParser" />
         public string? QueryText(string html, string selector)
         {
-            var document = htmlParser.ParseDocument(html);
+            var document = _htmlParser.ParseDocument(html);
             return document.QuerySelector(selector)?.TextContent.Trim();
         }
 
-        /// <inheritdoc cref="ArgoSharp.IHtmlParser">
+        /// <inheritdoc cref="ArgoSharp.IHtmlParser" />
         public IEnumerable<string> QueryTexts(string html, string selector)
         {
-            var document = htmlParser.ParseDocument(html);
+            var document = _htmlParser.ParseDocument(html);
             return document.QuerySelectorAll(selector).Select(x => x.TextContent.Trim());
         }
     }

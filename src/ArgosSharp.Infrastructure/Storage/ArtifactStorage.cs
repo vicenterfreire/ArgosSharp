@@ -8,15 +8,14 @@ namespace ArgosSharp.Infrastructure.Storage
 {
     internal class ArtifactStorage(IMinioClient minioClient, IConfiguration configuration) : IArtifactStorage
     {
-        private readonly IMinioClient _minioClient = minioClient;
         private readonly string _bucket = configuration["S3_BUCKET"] ?? throw new InvalidOperationException("S3_BUCKET is not configured.");
 
         public async Task<ArtifactStorageResult> UploadAsync(Stream content, string storagePath, string contentType, CancellationToken cancellation = default)
         {
-            var exists = await _minioClient.BucketExistsAsync(new BucketExistsArgs().WithBucket(_bucket), cancellation);
+            var exists = await minioClient.BucketExistsAsync(new BucketExistsArgs().WithBucket(_bucket), cancellation);
 
             if (!exists)
-                await _minioClient.BucketExistsAsync(new BucketExistsArgs().WithBucket(_bucket), cancellation);
+                await minioClient.BucketExistsAsync(new BucketExistsArgs().WithBucket(_bucket), cancellation);
 
             var putObjectArgs = new PutObjectArgs()
                 .WithBucket(_bucket)
@@ -25,9 +24,9 @@ namespace ArgosSharp.Infrastructure.Storage
                 .WithObjectSize(content.Length)
                 .WithContentType(contentType);
 
-            await _minioClient.PutObjectAsync(putObjectArgs, cancellation);
+            await minioClient.PutObjectAsync(putObjectArgs, cancellation);
 
-            return new ArtifactStorageResult { StorageKey = storagePath, Size = content.Length, ContentType = contentType };
+            return new ArtifactStorageResult(StorageKey: storagePath, Size: content.Length, ContentType: contentType);
         }
 
         public async Task<Stream> DownloadAsync(
@@ -44,7 +43,7 @@ namespace ArgosSharp.Infrastructure.Storage
                     stream.CopyTo(memoryStream);
                 });
 
-            await _minioClient.GetObjectAsync(
+            await minioClient.GetObjectAsync(
                 args,
                 cancellationToken);
 
@@ -61,7 +60,7 @@ namespace ArgosSharp.Infrastructure.Storage
                 .WithBucket(_bucket)
                 .WithObject(storageKey);
 
-            await _minioClient.RemoveObjectAsync(
+            await minioClient.RemoveObjectAsync(
                 args,
                 cancellationToken);
         }

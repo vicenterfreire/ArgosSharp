@@ -1,21 +1,32 @@
 ﻿using ArgosSharp.Domain.Enums;
+using ArgosSharp.Domain.Exceptions.Jobs;
 using ArgosSharp.Domain.ValueObjects;
 
 namespace ArgosSharp.Domain.Entity
 {
     public sealed class Job
     {
-        public int Id { get; set; }
-        public string Name { get; set; }
-        public JobType JobType { get; set; }
-        public JobParameters Parameters { get; set; }
-        public JobPriority Priority { get; set; }
-        public bool Enabled { get; set; }
+        public int Id { get; init; }
+        public string Name { get; init; }
+        public JobType JobType { get; init; }
+        public JobParameters Parameters { get; init; }
+        public JobPriority Priority { get; init; }
+        public bool Enabled { get; init; }
 
         private Job() { }
         
         public Job(string name, JobType jobType, JobParameters parameters, JobPriority priority, bool enabled)
         {
+            ArgumentNullException.ThrowIfNullOrEmpty(nameof(name));
+            
+            if (!Enum.IsDefined(jobType))
+                throw new ArgumentOutOfRangeException(nameof(jobType));
+            
+            ArgumentNullException.ThrowIfNull(nameof(parameters));
+            
+            if (!Enum.IsDefined(priority))
+                throw new ArgumentOutOfRangeException(nameof(priority));
+            
             Name = name;
             JobType = jobType;
             Parameters = parameters;
