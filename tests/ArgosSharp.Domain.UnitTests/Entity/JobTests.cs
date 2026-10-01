@@ -1,4 +1,4 @@
-﻿using ArgosSharp.Domain.Entity;
+using ArgosSharp.Domain.Entity;
 using ArgosSharp.Domain.Enums;
 using ArgosSharp.Domain.ValueObjects;
 using FluentAssertions;
@@ -29,7 +29,7 @@ public sealed class JobTests
     }
 
     [Test]
-    public void Constructor_WithNullName_ShouldNotThrow()
+    public void Constructor_WithNullName_ShouldThrowArgumentException()
     {
         // Arrange
         var parameters = CreateValidParameters();
@@ -38,14 +38,11 @@ public sealed class JobTests
         var action = () => new Job(null!, JobType.NewsArticles, parameters, JobPriority.Normal, true);
 
         // Assert
-        action.Should().NotThrow();
-
-        var job = new Job(null!, JobType.NewsArticles, parameters, JobPriority.Normal, true);
-        job.Name.Should().BeNull();
+        action.Should().Throw<ArgumentException>();
     }
 
     [Test]
-    public void Constructor_WithEmptyName_ShouldNotThrow()
+    public void Constructor_WithEmptyName_ShouldThrowArgumentException()
     {
         // Arrange
         var parameters = CreateValidParameters();
@@ -54,10 +51,7 @@ public sealed class JobTests
         var action = () => new Job(string.Empty, JobType.NewsArticles, parameters, JobPriority.Normal, true);
 
         // Assert
-        action.Should().NotThrow();
-
-        var job = new Job(string.Empty, JobType.NewsArticles, parameters, JobPriority.Normal, true);
-        job.Name.Should().BeEmpty();
+        action.Should().Throw<ArgumentException>();
     }
 
     [Test]
@@ -74,16 +68,13 @@ public sealed class JobTests
     }
 
     [Test]
-    public void Constructor_WithNullParameters_ShouldNotThrow()
+    public void Constructor_WithNullParameters_ShouldThrowArgumentNullException()
     {
         // Act
         var action = () => new Job("News Scraper", JobType.NewsArticles, null!, JobPriority.Normal, true);
 
         // Assert
-        action.Should().NotThrow();
-
-        var job = new Job("News Scraper", JobType.NewsArticles, null!, JobPriority.Normal, true);
-        job.Parameters.Should().BeNull();
+        action.Should().Throw<ArgumentNullException>();
     }
 
     [Test]

@@ -1,4 +1,4 @@
-﻿using ArgosSharp.Application.Interfaces.Fetcher;
+using ArgosSharp.Application.Interfaces.Fetcher;
 using ArgosSharp.Application.Interfaces.Parser;
 using ArgosSharp.Infrastructure.Scrapers.NewsArticles;
 using FluentAssertions;
@@ -102,6 +102,7 @@ namespace ArgosSharp.Infrastructure.UnitTests.Strategies.Scrapers
             // Assert
             result.Should().HaveCount(1);
             result[0].Title.Should().Be("Title test");
+            result[0].Source.Should().Be("sao_sebastiao");
         }
 
         [Test]
@@ -129,9 +130,10 @@ namespace ArgosSharp.Infrastructure.UnitTests.Strategies.Scrapers
             SetupMapping();
 
             // Act
-            await _scraper.ProcessScraperAsync("test", 2);
+            var result = await _scraper.ProcessScraperAsync("test", 2);
 
             // Assert
+            result.Should().HaveCount(2);
             _fetcherMock.Verify(x =>
                 x.GetStringAsync(It.Is<string>(url => url.Contains("&pg="))),
                 Times.AtLeastOnce);

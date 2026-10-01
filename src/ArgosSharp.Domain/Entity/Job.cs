@@ -1,5 +1,4 @@
-﻿using ArgosSharp.Domain.Enums;
-using ArgosSharp.Domain.Exceptions.Jobs;
+using ArgosSharp.Domain.Enums;
 using ArgosSharp.Domain.ValueObjects;
 
 namespace ArgosSharp.Domain.Entity
@@ -14,19 +13,19 @@ namespace ArgosSharp.Domain.Entity
         public bool Enabled { get; init; }
 
         private Job() { }
-        
+
         public Job(string name, JobType jobType, JobParameters parameters, JobPriority priority, bool enabled)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(nameof(name));
-            
+            ArgumentNullException.ThrowIfNullOrEmpty(name);
+
             if (!Enum.IsDefined(jobType))
                 throw new ArgumentOutOfRangeException(nameof(jobType));
-            
-            ArgumentNullException.ThrowIfNull(nameof(parameters));
-            
+
+            ArgumentNullException.ThrowIfNull(parameters);
+
             if (!Enum.IsDefined(priority))
                 throw new ArgumentOutOfRangeException(nameof(priority));
-            
+
             Name = name;
             JobType = jobType;
             Parameters = parameters;

@@ -1,6 +1,6 @@
-﻿namespace ArgosSharp.Api.Middlewares
+namespace ArgosSharp.Api.Middlewares
 {
-    internal class MainMiddleware(RequestDelegate next, ILogger<MainMiddleware> logger)
+    public class MainMiddleware(RequestDelegate next, ILogger<MainMiddleware> logger)
     {
         internal async Task InvokeAsync(HttpContext context)
         {

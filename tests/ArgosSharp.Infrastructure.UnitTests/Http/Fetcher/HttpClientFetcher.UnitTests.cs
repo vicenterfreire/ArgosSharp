@@ -1,4 +1,4 @@
-﻿using ArgosSharp.Infrastructure.Http.Fetcher;
+using ArgosSharp.Infrastructure.Http.Fetcher;
 using Moq;
 using FluentAssertions;
 using System.Net;
@@ -12,7 +12,7 @@ namespace ArgosSharp.Infrastructure.UnitTests.Http.Fetcher
         private MockRepository _mockRepository;
         private HttpClient _httpClient;
         private HttpClientFetcher _fetcher;
-        
+
         private const string TestURL = "https://google.com";
         private const string TestExpected = "Expected Result";
 
@@ -49,6 +49,22 @@ namespace ArgosSharp.Infrastructure.UnitTests.Http.Fetcher
 
             // Assert
             result.Should().Be(TestExpected);
+        }
+
+        [Test]
+        public async Task GetStringAsync_WhenStatusCodeIsError_ShouldThrowHttpRequestException()
+        {
+            // Arrange
+            _httpMessageHandler
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage { StatusCode = HttpStatusCode.NotFound });
+
+            // Act
+            Func<Task> act = () => _fetcher.GetStringAsync(TestURL);
+
+            // Assert
+            await act.Should().ThrowAsync<HttpRequestException>();
         }
     }
 }

@@ -1,85 +1,40 @@
-﻿using ArgosSharp.Application.Services.JobQueue;
+﻿using ArgosSharp.Application.Services.JobExecutionQueue;
+using ArgosSharp.Domain.Entity;
 using ArgosSharp.Domain.Enums;
-using ArgosSharp.Domain.Factories.JobFactory;
 using ArgosSharp.Domain.ValueObjects;
 using FluentAssertions;
-using Moq;
 
-namespace ArgosSharp.Application.UnitTests.Services
+namespace ArgosSharp.Application.UnitTests.Services;
+
+public class JobExecutionQueueTests
 {
-    public class JobQueueServiceUnitTests
+    [Test]
+    public async Task EnqueueAsync_WhenJobExecutionIsQueued_ShouldReturnItOnDequeue()
     {
-        private JobQueue _queue;
-        private IJobFactory _jobFactory;
-        private CancellationTokenSource _cancellationToken;
+        // Arrange
+        var queue = new JobExecutionQueue();
+        var jobExecution = new JobExecution(1, JobStatusEnum.Created, new JobParameters("python", ["caraguatatuba"], 1));
 
-        [SetUp]
-        public void Setup()
-        {
-            _queue = new JobQueue();
-            _jobFactory = new JobFactory();
-            _cancellationToken = new CancellationTokenSource();
-        }
+        // Act
+        await queue.EnqueueAsync(jobExecution);
+        var result = await queue.DequeueAsync(CancellationToken.None);
 
-        [TearDown]
-        public void TearDown()
-        {
-            _cancellationToken.Dispose();
-        }
+        // Assert
+        result.Should().BeSameAs(jobExecution);
+    }
 
-        [Test]
-        public async Task EnqueueAsync_ShouldAddJob()
-        {
-            // Arrange
-            var job = _jobFactory.Create
-            (
-                searchTerm: "Teste",
-                depth: 1,
-                sites: ["caraguatatuba"]
-            );
+    [Test]
+    public async Task DequeueAsync_WhenCancelled_ShouldThrowOperationCanceledException()
+    {
+        // Arrange
+        var queue = new JobExecutionQueue();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
 
-            // Act
-            await _queue.EnqueueAsync(job);
-            var dequeue = await _queue.DequeueAsync(_cancellationToken.Token);
+        // Act
+        Func<Task> act = () => queue.DequeueAsync(cts.Token);
 
-            // Assert
-            dequeue.Should().BeSameAs(job);
-        }
-
-        [Test]
-        public async Task DequeueAsync_ShouldWaitUntilJobIsEnqueue()
-        {
-            // Arrange
-            var job = _jobFactory.Create
-            (
-                searchTerm: "Teste",
-                depth: 1,
-                sites: ["caraguatatuba"]
-            );
-
-            // Act
-            var dequeueTask = _queue.DequeueAsync(_cancellationToken.Token);
-
-            await Task.Delay(180);
-            await _queue.EnqueueAsync(job);
-
-            var dequeue = await dequeueTask;
-
-            // Assert
-            dequeue.Should().BeSameAs(job);
-        }
-
-        [Test]
-        public void DequeueAsync_ShouldThrow_WhenCancelled()
-        {
-            // Arrange
-            _cancellationToken.Cancel();
-
-            // Act
-            Func<Task> act = async () => await _queue.DequeueAsync(_cancellationToken.Token);
-
-            // Assert
-            act.Should().ThrowAsync<TaskCanceledException>();
-        }
+        // Assert
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 }

@@ -1,4 +1,4 @@
-﻿using AngleSharp.Browser;
+using AngleSharp.Browser;
 using ArgosSharp.Application.Interfaces.Parser;
 using Microsoft.Extensions.Logging;
 
@@ -21,7 +21,10 @@ namespace ArgosSharp.Infrastructure.Extractor
                 .Select(x => x!.Value)
                 .ToList();
 
-            return numbers!.Count > 1 ? numbers!.Max() : 1;
+            if (numbers == null || numbers.Count <= 1)
+                return 1;
+
+            return numbers.Max();
         }
     }
 }

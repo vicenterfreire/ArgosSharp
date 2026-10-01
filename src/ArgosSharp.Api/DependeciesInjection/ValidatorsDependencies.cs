@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 
 using ArgosSharp.Api.Validators;
 
@@ -8,7 +8,7 @@ namespace ArgosSharp.Api.DependeciesInjection
     {
         internal static IServiceCollection AddValidators(this IServiceCollection services)
         {
-            services.AddValidatorsFromAssemblyContaining<CreateJobValidator>();
+            services.AddValidatorsFromAssemblyContaining<CreateJobValidator>(includeInternalTypes: true);
 
             return services;
         }

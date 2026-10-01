@@ -1,109 +1,81 @@
-﻿using FluentAssertions;
-using Moq;
+using ArgosSharp.Application.Interfaces.Repositories;
+using ArgosSharp.Application.Services.ArtifactsService;
+using ArgosSharp.Application.Services.ExporterService;
 using ArgosSharp.Application.Services.JobProcessor;
 using ArgosSharp.Application.UseCase.Scraper;
-using ArgosSharp.Application.Interfaces.UnitOfWork;
+using ArgosSharp.Domain.Entity;
 using ArgosSharp.Domain.Enums;
 using ArgosSharp.Domain.ValueObjects;
-using ArgosSharp.Domain.Factories.JobFactory;
-using ArgosSharp.Domain.Entity;
+using FluentAssertions;
+using Moq;
 
-namespace ArgosSharp.Application.UnitTests.Services
+namespace ArgosSharp.Application.UnitTests.Services;
+
+public class JobProcessorServiceTests
 {
-    public class JobProcessorServiceTests
+    private Mock<IJobExecutionRepository> _jobExecutionRepository = null!;
+    private Mock<IScraperContext> _scraperContext = null!;
+    private Mock<IJobRepository> _jobRepository = null!;
+    private Mock<IExportService> _exportService = null!;
+    private Mock<IArtifactsService> _artifactsService = null!;
+
+    [SetUp]
+    public void SetUp()
     {
-        private Mock<IJobUnitOfWork> _jobUnitOfWork;
-        private Mock<IScraperProcessor> _scraperProcessorMock;
-        private MockRepository _mockRepository;
-        private JobProcessorService _service;
-        private JobFactory _jobFactory;
+        _jobExecutionRepository = new Mock<IJobExecutionRepository>(MockBehavior.Strict);
+        _scraperContext = new Mock<IScraperContext>(MockBehavior.Strict);
+        _jobRepository = new Mock<IJobRepository>(MockBehavior.Strict);
+        _exportService = new Mock<IExportService>(MockBehavior.Strict);
+        _artifactsService = new Mock<IArtifactsService>(MockBehavior.Strict);
+    }
 
-        [SetUp]
-        public void Setup()
+    [Test]
+    public async Task ProcessJobAsync_WhenNewsJobIsProcessed_ShouldCompleteExecutionAndPersistArtifact()
+    {
+        // Arrange
+        var job = new Job("News job", JobType.NewsArticles, new JobParameters("python", ["caraguatatuba"], 1), JobPriority.Normal, true);
+        var jobExecution = new JobExecution(job.Id, JobStatusEnum.Created, job.Parameters);
+        var newsArticles = new List<NewsArticle>
         {
-            _mockRepository = new MockRepository(MockBehavior.Strict);
-            SetupJobStore();
-            _scraperProcessorMock = _mockRepository.Create<IScraperProcessor>();
-            _service = new JobProcessorService(_scraperProcessorMock.Object, _jobUnitOfWork.Object);
-            _jobFactory = new JobFactory();
-        }
+            new("Title 1", DateTime.UtcNow, 2025, "https://example.com/1", "summary", "caraguatatuba"),
+            new("Title 2", DateTime.UtcNow, 2025, "https://example.com/2", "summary", "caraguatatuba")
+        };
+        var export = new ResultExport(new MemoryStream(new byte[] { 1, 2, 3 }), "results.csv", "text/csv", ".csv");
 
-        private void SetupJobStore()
-        {
-            _jobUnitOfWork = _mockRepository.Create<IJobUnitOfWork>();
-            _jobUnitOfWork.Setup(x => x.UpdateJobAsync(It.IsAny<Job>())).Returns(Task.CompletedTask);
-            _jobUnitOfWork.Setup(x => x.UpdateJobStatus(It.IsAny<Job>(), It.IsAny<JobStatusEnum>())).Returns(Task.CompletedTask);
-        }
+        _jobExecutionRepository.Setup(x => x.UpdateAsync(jobExecution)).Returns(Task.CompletedTask);
+        _jobRepository.Setup(x => x.GetAsync(job.Id)).ReturnsAsync(job);
+        _scraperContext.Setup(x => x.GetNewsBySourceAsync(job.Parameters)).ReturnsAsync(newsArticles);
+        _exportService.Setup(x => x.ExportAsync(It.IsAny<JobExecutionResult>(), ExportFormat.CSV)).ReturnsAsync(export);
+        _artifactsService.Setup(x => x.CreateAsync(jobExecution.Id, export.Content, export.FileName, export.ContentType, CancellationToken.None)).ReturnsAsync(new Artifact(jobExecution.Id, export.FileName, export.ContentType, export.Content.Length, "executions/1/results.csv"));
 
-        [Test]
-        public async Task ProcessJobAsync_WhenScraperSucceeds_ShouldSetStatusToCompleted()
-        {
-            // Arrange
-            var job = _jobFactory.Create(
-                searchTerm: "teste",
-                depth: 2,
-                sites: ["caraguatatuba", "ubatuba"]
-            );
+        var sut = new JobProcessorService(_jobExecutionRepository.Object, _scraperContext.Object, _jobRepository.Object, _exportService.Object, _artifactsService.Object);
 
-            var fakeData = new List<News> { CreateNews("News 1"), CreateNews("News 2") };
+        // Act
+        await sut.ProcessJobAsync(jobExecution);
 
-            _scraperProcessorMock
-                .Setup(x => x.GetNews(job.SearchTerm, job.Parameters.Depth, job.Parameters.Sites))
-                .ReturnsAsync(fakeData);
-            _jobUnitOfWork
-                .Setup(x => x.UpdateJobStatus(job, JobStatusEnum.Processing))
-                .Callback(() => job.Status = JobStatusEnum.Processing)
-                .Returns(Task.CompletedTask);
-            _jobUnitOfWork
-                .Setup(x => x.UpdateJobStatus(job, JobStatusEnum.Completed))
-                .Callback(() => job.Status = JobStatusEnum.Completed)
-                .Returns(Task.CompletedTask);
+        // Assert
+        jobExecution.JobStatus.Should().Be(JobStatusEnum.Completed);
+        _jobExecutionRepository.Verify(x => x.UpdateAsync(jobExecution), Times.Exactly(2));
+        _exportService.Verify(x => x.ExportAsync(It.Is<JobExecutionResult>(r => r.JobType == typeof(NewsArticle)), ExportFormat.CSV), Times.Once);
+        _artifactsService.Verify(x => x.CreateAsync(jobExecution.Id, export.Content, export.FileName, export.ContentType, CancellationToken.None), Times.Once);
+    }
 
-            // Act
-            await _service.ProcessJobAsync(job);
+    [Test]
+    public async Task ProcessJobAsync_WhenJobDoesNotExist_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var job = new Job("News job", JobType.NewsArticles, new JobParameters("python", ["caraguatatuba"], 1), JobPriority.Normal, true);
+        var jobExecution = new JobExecution(42, JobStatusEnum.Created, job.Parameters);
 
-            // Assert
-            job.Status.Should().Be(JobStatusEnum.Completed);
-            job.Data.Should().BeEquivalentTo(fakeData);
-            _jobUnitOfWork.Verify(x => x.UpdateJobStatus(job, JobStatusEnum.Processing), Times.Exactly(1));
-            _jobUnitOfWork.Verify(x => x.UpdateJobStatus(job, JobStatusEnum.Completed), Times.Exactly(1));
-        }
+        _jobExecutionRepository.Setup(x => x.UpdateAsync(jobExecution)).Returns(Task.CompletedTask);
+        _jobRepository.Setup(x => x.GetAsync(jobExecution.JobId)).ReturnsAsync((Job?)null);
 
-        [Test]
-        public async Task ProcessJobAsync_WhenScraperThrowsException_ShouldSetStatusToFailed()
-        {
-            // Arrange
-            var job = _jobFactory.Create(
-                searchTerm: "teste",
-                depth: 1,
-                sites: ["caraguatatuba"]
-            );
+        var sut = new JobProcessorService(_jobExecutionRepository.Object, _scraperContext.Object, _jobRepository.Object, _exportService.Object, _artifactsService.Object);
 
-            _scraperProcessorMock
-                .Setup(x => x.GetNews(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<IEnumerable<string>>()))
-                .ThrowsAsync(new InvalidOperationException("Simulated Error"));
-            _jobUnitOfWork
-                .Setup(x => x.UpdateJobStatus(job, JobStatusEnum.Processing))
-                .Callback(() => job.Status = JobStatusEnum.Processing)
-                .Returns(Task.CompletedTask);
-            _jobUnitOfWork
-                .Setup(x => x.UpdateJobStatus(job, JobStatusEnum.Failed))
-                .Callback(() => job.Status = JobStatusEnum.Failed)
-                .Returns(Task.CompletedTask);
+        // Act
+        Func<Task> act = () => sut.ProcessJobAsync(jobExecution);
 
-            // Act
-            await _service.ProcessJobAsync(job);
-
-            // Assert
-            job.Status.Should().Be(JobStatusEnum.Failed);
-            job.Error.Should().Be("Simulated Error");
-            _jobUnitOfWork.Verify(x => x.UpdateJobStatus(job, JobStatusEnum.Processing), Times.Exactly(1));
-            _jobUnitOfWork.Verify(x => x.UpdateJobStatus(job, JobStatusEnum.Failed), Times.Exactly(1));
-        }
-
-        private static News CreateNews(string title, string description = "Some text")
-        {
-            return new News(title, DateTime.Now, DateTime.Now.Year, "https://example.com", description, "Scraper");
-        }
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("Job is null");
     }
 }

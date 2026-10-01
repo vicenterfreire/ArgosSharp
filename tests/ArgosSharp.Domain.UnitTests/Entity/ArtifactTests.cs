@@ -1,4 +1,4 @@
-﻿using ArgosSharp.Domain.Entity;
+using ArgosSharp.Domain.Entity;
 using FluentAssertions;
 
 namespace ArgosSharp.Domain.UnitTests.Entity;
@@ -27,86 +27,68 @@ public sealed class ArtifactTests
     }
 
     [Test]
-    public void Constructor_WithNullFileName_ShouldNotThrow()
+    public void Constructor_WithNullFileName_ShouldThrowArgumentException()
     {
         // Act
         var action = () => new Artifact(1, null!, "text/csv", 1, "executions/1/result.csv");
 
         // Assert
-        action.Should().NotThrow();
-
-        var artifact = new Artifact(1, null!, "text/csv", 1, "executions/1/result.csv");
-        artifact.FileName.Should().BeNull();
+        action.Should().Throw<ArgumentException>();
     }
 
     [Test]
-    public void Constructor_WithEmptyFileName_ShouldNotThrow()
+    public void Constructor_WithEmptyFileName_ShouldThrowArgumentException()
     {
         // Act
         var action = () => new Artifact(1, string.Empty, "text/csv", 1, "executions/1/result.csv");
 
         // Assert
-        action.Should().NotThrow();
-
-        var artifact = new Artifact(1, string.Empty, "text/csv", 1, "executions/1/result.csv");
-        artifact.FileName.Should().BeEmpty();
+        action.Should().Throw<ArgumentException>();
     }
 
     [Test]
-    public void Constructor_WithNullContentType_ShouldNotThrow()
+    public void Constructor_WithNullContentType_ShouldThrowArgumentException()
     {
         // Act
         var action = () => new Artifact(1, "result.csv", null!, 1, "executions/1/result.csv");
 
         // Assert
-        action.Should().NotThrow();
-
-        var artifact = new Artifact(1, "result.csv", null!, 1, "executions/1/result.csv");
-        artifact.ContentType.Should().BeNull();
+        action.Should().Throw<ArgumentException>();
     }
 
     [Test]
-    public void Constructor_WithEmptyContentType_ShouldNotThrow()
+    public void Constructor_WithEmptyContentType_ShouldThrowArgumentException()
     {
         // Act
         var action = () => new Artifact(1, "result.csv", string.Empty, 1, "executions/1/result.csv");
 
         // Assert
-        action.Should().NotThrow();
-
-        var artifact = new Artifact(1, "result.csv", string.Empty, 1, "executions/1/result.csv");
-        artifact.ContentType.Should().BeEmpty();
+        action.Should().Throw<ArgumentException>();
     }
 
     [Test]
-    public void Constructor_WithNullStoragePath_ShouldNotThrow()
+    public void Constructor_WithNullStoragePath_ShouldThrowArgumentException()
     {
         // Act
         var action = () => new Artifact(1, "result.csv", "text/csv", 1, null!);
 
         // Assert
-        action.Should().NotThrow();
-
-        var artifact = new Artifact(1, "result.csv", "text/csv", 1, null!);
-        artifact.StoragePath.Should().BeNull();
+        action.Should().Throw<ArgumentException>();
     }
 
     [Test]
-    public void Constructor_WithEmptyStoragePath_ShouldNotThrow()
+    public void Constructor_WithEmptyStoragePath_ShouldThrowArgumentException()
     {
         // Act
         var action = () => new Artifact(1, "result.csv", "text/csv", 1, string.Empty);
 
         // Assert
-        action.Should().NotThrow();
-
-        var artifact = new Artifact(1, "result.csv", "text/csv", 1, string.Empty);
-        artifact.StoragePath.Should().BeEmpty();
+        action.Should().Throw<ArgumentException>();
     }
 
-    [TestCase(2)]
-    [TestCase(1024)]
-    public void Constructor_WithSizeGreaterThanOne_ShouldThrowArgumentOutOfRangeException(long size)
+    [TestCase(0)]
+    [TestCase(-1)]
+    public void Constructor_WithSizeLessThanOne_ShouldThrowArgumentOutOfRangeException(long size)
     {
         // Act
         var action = () => new Artifact(1, "result.csv", "text/csv", size, "executions/1/result.csv");
@@ -115,10 +97,9 @@ public sealed class ArtifactTests
         action.Should().Throw<ArgumentOutOfRangeException>().WithParameterName("size");
     }
 
-    [TestCase(0)]
-    [TestCase(-1)]
     [TestCase(1)]
-    public void Constructor_WithSizeLessThanOrEqualToOne_ShouldCreateArtifact(long size)
+    [TestCase(1024)]
+    public void Constructor_WithSizeGreaterThanOrEqualToOne_ShouldCreateArtifact(long size)
     {
         // Act
         var artifact = new Artifact(1, "result.csv", "text/csv", size, "executions/1/result.csv");

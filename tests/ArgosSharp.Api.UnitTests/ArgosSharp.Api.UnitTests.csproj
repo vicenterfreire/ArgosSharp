@@ -20,10 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ArgosSharp.Api\ArgosSharp.Api.csproj" />
-    <ProjectReference Include="..\ArgosSharp.Application\ArgosSharp.Application.csproj" />
-    <ProjectReference Include="..\ArgosSharp.Domain\ArgosSharp.Domain.csproj" />
-    <ProjectReference Include="..\ArgosSharp.Infrastructure\ArgosSharp.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\ArgosSharp.Api\ArgosSharp.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -54,7 +54,7 @@ namespace ArgosSharp.Domain.Entity
             if (!Enum.IsDefined(jobStatus))
                 throw new ArgumentOutOfRangeException(nameof(jobStatus));
             
-            ArgumentNullException.ThrowIfNull(nameof(parameters));
+            ArgumentNullException.ThrowIfNull(parameters);
             
             JobId = jobId;
             JobStatus = jobStatus;

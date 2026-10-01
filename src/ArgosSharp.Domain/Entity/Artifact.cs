@@ -1,4 +1,4 @@
-﻿namespace ArgosSharp.Domain.Entity
+namespace ArgosSharp.Domain.Entity
 {
     public sealed class Artifact
     {
@@ -13,11 +13,11 @@
 
         public Artifact(int jobExecId, string fileName, string contentType, long size, string storagePath)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(nameof(fileName));
-            ArgumentNullException.ThrowIfNullOrEmpty(nameof(contentType));
-            ArgumentNullException.ThrowIfNullOrEmpty(nameof(storagePath));
-            ArgumentOutOfRangeException.ThrowIfLessThan(1, size, nameof(size));
-            
+            ArgumentNullException.ThrowIfNullOrEmpty(fileName);
+            ArgumentNullException.ThrowIfNullOrEmpty(contentType);
+            ArgumentNullException.ThrowIfNullOrEmpty(storagePath);
+            ArgumentOutOfRangeException.ThrowIfLessThan(size, 1, nameof(size));
+
             JobExecutionId = jobExecId;
             FileName = fileName;
             ContentType = contentType;

@@ -1,58 +1,64 @@
-﻿using Moq;
-using Microsoft.Extensions.DependencyInjection;
-using ArgosSharp.Application.Services.JobWorker;
-using ArgosSharp.Application.Services.JobQueue;
+using ArgosSharp.Application.Services.JobExecutionQueue;
 using ArgosSharp.Application.Services.JobProcessor;
-using ArgosSharp.Domain.ValueObjects;
-using ArgosSharp.Domain.Factories.JobFactory;
+using ArgosSharp.Application.Services.JobWorker;
+using ArgosSharp.Domain.Entity;
 using ArgosSharp.Domain.Enums;
+using ArgosSharp.Domain.ValueObjects;
+using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Moq;
 
-namespace ArgosSharp.Application.UnitTests.Services
+namespace ArgosSharp.Application.UnitTests.Services;
+
+public class JobWorkerTests
 {
-    public class JobWorkerTests
+    [Test]
+    public async Task ExecuteAsync_WhenQueueContainsJob_ShouldInvokeProcessorOnce()
     {
-        private JobFactory _jobFactory;
+        // Arrange
+        var jobExecution = new JobExecution(5, JobStatusEnum.Created, new JobParameters("python", ["caraguatatuba"], 1));
+        var queue = new Mock<IJobExecutionQueue>(MockBehavior.Strict);
+        var processor = new Mock<IJobProcessorService>(MockBehavior.Strict);
+        var scope = new Mock<IServiceScope>(MockBehavior.Loose);
+        var serviceProvider = new Mock<IServiceProvider>(MockBehavior.Strict);
+        var scopeFactory = new Mock<IServiceScopeFactory>(MockBehavior.Strict);
+        var processed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        [SetUp]
-        public void SetUp()
-        {
-            _jobFactory = new JobFactory();
-        }
+        queue.SetupSequence(x => x.DequeueAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(jobExecution)
+            .Returns(new TaskCompletionSource<JobExecution>().Task);
+        processor.Setup(x => x.ProcessJobAsync(jobExecution)).Returns(Task.CompletedTask).Callback(() => processed.SetResult());
+        serviceProvider.Setup(x => x.GetService(typeof(IJobProcessorService))).Returns(processor.Object);
+        scope.SetupGet(x => x.ServiceProvider).Returns(serviceProvider.Object);
+        scopeFactory.Setup(x => x.CreateScope()).Returns(scope.Object);
+        scope.Setup(x => x.Dispose());
 
-        [Test]
-        public async Task ExecuteAsync_ShouldProcessJob_FromQueue()
-        {
-            // Arrange
-            var job = _jobFactory.Create("job2", depth: 1, sites: ["caraguatatuba"]);
+        var worker = new JobWorker(queue.Object, scopeFactory.Object);
 
-            var jobQueueMock = new Mock<IJobQueue>();
-            jobQueueMock.Setup(q => q.DequeueAsync(It.IsAny<CancellationToken>()))
-                        .ReturnsAsync(job);
+        // Act
+        await worker.StartAsync(CancellationToken.None);
+        await processed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await worker.StopAsync(CancellationToken.None);
 
-            var processorMock = new Mock<IJobProcessorService>();
-            processorMock.Setup(p => p.ProcessJobAsync(job))
-                         .Returns(Task.CompletedTask);
+        // Assert
+        processor.Verify(x => x.ProcessJobAsync(jobExecution), Times.Once);
+    }
 
-            var serviceProviderMock = new Mock<IServiceProvider>();
-            serviceProviderMock.Setup(sp => sp.GetService(typeof(IJobProcessorService)))
-                               .Returns(processorMock.Object);
+    [Test]
+    public async Task ExecuteAsync_WhenTokenIsAlreadyCancelled_ShouldNotDequeueOrProcessJob()
+    {
+        // Arrange
+        var queue = new Mock<IJobExecutionQueue>(MockBehavior.Strict);
+        var scopeFactory = new Mock<IServiceScopeFactory>(MockBehavior.Strict);
+        var worker = new JobWorker(queue.Object, scopeFactory.Object);
 
-            var scopeMock = new Mock<IServiceScope>();
-            scopeMock.Setup(s => s.ServiceProvider).Returns(serviceProviderMock.Object);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
 
-            var scopeFactoryMock = new Mock<IServiceScopeFactory>();
-            scopeFactoryMock.Setup(sf => sf.CreateScope()).Returns(scopeMock.Object);
+        // Act
+        await worker.StartAsync(cts.Token);
 
-            var worker = new JobWorker(jobQueueMock.Object, scopeFactoryMock.Object);
-
-            var cts = new CancellationTokenSource();
-            cts.CancelAfter(100);
-
-            // Act
-            await worker.StartAsync(cts.Token);
-
-            // Assert
-            processorMock.Verify(p => p.ProcessJobAsync(job), Times.AtLeastOnce);
-        }
+        // Assert
+        queue.Verify(x => x.DequeueAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

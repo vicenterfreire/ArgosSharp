@@ -1,67 +1,78 @@
-﻿using FluentAssertions;
-using ArgosSharp.Application.StrategiesContext.Scraper;
-using ArgosSharp.Application.Interfaces.Strategies;
+﻿using ArgosSharp.Application.Interfaces.Scrapers;
+using ArgosSharp.Application.UseCase.Scraper;
+using ArgosSharp.Domain.Enums;
 using ArgosSharp.Domain.ValueObjects;
+using FluentAssertions;
 using Moq;
 
-namespace ArgosSharp.Application.UnitTests.StrategiesContext
+namespace ArgosSharp.Application.UnitTests.StrategiesContext;
+
+public class ScraperContextTests
 {
-    [TestFixture]
-    public class ScraperStrategyContextTests
+    [Test]
+    public async Task GetNewsBySourceAsync_WhenSourceExists_ShouldReturnNewsFromThatSource()
     {
-        private const string ValidResultTitle = "Fake result for test";
-        private const string SearchTerm = "test";
-        private const string ExceptionMessage = "*No Scraper found*";
-        private const int Depth = 1;
-
-        private ScraperStrategyContext scraperStrategyContext;
-        private Mock<IScraperStrategy> scraperStrategyMock;
-        private Mock<IScraperStrategy> validStrategyMock;
-        private MockRepository mockRepository;
-
-        [SetUp]
-        public void SetUp()
+        // Arrange
+        var newsResults = new List<NewsArticle>
         {
-            mockRepository = new MockRepository(MockBehavior.Strict);
-            scraperStrategyMock = mockRepository.Create<IScraperStrategy>();
-            scraperStrategyMock.SetupProperty(x => x.Name, "InvalidTestSource");
-            scraperStrategyMock.Setup(x =>
-                    x.ProcessScraperAsync(It.Is<string>(x => x.Equals(SearchTerm)), It.Is<int>(x => x.Equals(Depth))))
-                .Throws(new Exception(ExceptionMessage));
+            new("Title 1", DateTime.UtcNow, 2025, "https://example.com/1", "summary", "caraguatatuba"),
+            new("Title 2", DateTime.UtcNow, 2025, "https://example.com/2", "summary", "caraguatatuba")
+        };
+        var newsScraper = new Mock<INewsArticlesScrapers>(MockBehavior.Strict);
+        newsScraper.SetupGet(x => x.Name).Returns("caraguatatuba");
+        newsScraper.Setup(x => x.ProcessScraperAsync("python", 1)).ReturnsAsync(newsResults);
 
-            validStrategyMock = mockRepository.Create<IScraperStrategy>();
-            validStrategyMock.SetupProperty(x => x.Name, "ValidTestSource");
-            validStrategyMock.Setup(x =>
-                    x.ProcessScraperAsync(It.Is<string>(x => x.Equals(SearchTerm)), It.Is<int>(x => x.Equals(Depth))))
-                .ReturnsAsync([CreateNews(ValidResultTitle)]);
-            scraperStrategyContext = new ScraperStrategyContext([scraperStrategyMock.Object, validStrategyMock.Object]);
-        }
+        var jobPostingScraper = new Mock<IJobPostingsScrapers>(MockBehavior.Strict);
+        jobPostingScraper.SetupGet(x => x.Name).Returns("other-source");
+        var sut = new ScraperContext([newsScraper.Object], [jobPostingScraper.Object]);
+        var parameters = new JobParameters("python", ["caraguatatuba"], 1);
 
-        [Test]
-        public async Task GetNewsBySourceAsync_ShouldReturnResults_FromMatchingScraper()
+        // Act
+        var result = await sut.GetNewsBySourceAsync(parameters);
+
+        // Assert
+        result.Should().BeEquivalentTo(newsResults);
+    }
+
+    [Test]
+    public async Task GetJobsBySourceAsync_WhenSourceExists_ShouldReturnJobsFromThatSource()
+    {
+        // Arrange
+        var jobResults = new List<JobPosting>
         {
-            // Act
-            var result = await scraperStrategyContext.GetNewsBySourceAsync(
-                "ValidTestSource", SearchTerm, Depth);
+            new("Developer", "https://example.com/job/1", "C# developer", "ubatuba"),
+            new("Analyst", "https://example.com/job/2", "Data analyst", "ubatuba")
+        };
+        var newsScraper = new Mock<INewsArticlesScrapers>(MockBehavior.Strict);
+        newsScraper.SetupGet(x => x.Name).Returns("other-news-source");
+        var jobScraper = new Mock<IJobPostingsScrapers>(MockBehavior.Strict);
+        jobScraper.SetupGet(x => x.Name).Returns("ubatuba");
+        jobScraper.Setup(x => x.ProcessScraperAsync("csharp", 1)).ReturnsAsync(jobResults);
 
-            // Assert
-            result.Should().NotBeEmpty();
-            result[0].Title.Should().Contain(ValidResultTitle);
-        }
+        var sut = new ScraperContext([newsScraper.Object], [jobScraper.Object]);
+        var parameters = new JobParameters("csharp", ["ubatuba"], 1);
 
-        [Test]
-        public void GetNewsBySourceAsync_ShouldThrow_WhenNoScraperFound()
-        {
-            // Act
-            Func<Task> act = async () =>
-                await scraperStrategyContext.GetNewsBySourceAsync("invalid", SearchTerm, Depth);
+        // Act
+        var result = await sut.GetJobsBySourceAsync(parameters);
 
-            // Assert
-            act.Should().ThrowAsync<Exception>()
-               .WithMessage(ExceptionMessage);
-        }
+        // Assert
+        result.Should().BeEquivalentTo(jobResults);
+    }
 
-        private static News CreateNews(string title) =>
-            new(title, DateTime.Now, DateTime.Now.Year, "some link", "Some abstract", "Source");
+    [Test]
+    public async Task GetNewsBySourceAsync_WhenSourceDoesNotExist_ShouldThrowKeyNotFoundException()
+    {
+        // Arrange
+        var newsScraper = new Mock<INewsArticlesScrapers>(MockBehavior.Strict);
+        newsScraper.SetupGet(x => x.Name).Returns("caraguatatuba");
+
+        var sut = new ScraperContext([newsScraper.Object], []);
+        var parameters = new JobParameters("python", ["unknown-source"], 1);
+
+        // Act
+        Func<Task> act = () => sut.GetNewsBySourceAsync(parameters);
+
+        // Assert
+        await act.Should().ThrowAsync<KeyNotFoundException>();
     }
 }

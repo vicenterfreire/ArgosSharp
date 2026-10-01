@@ -1,70 +1,62 @@
-﻿using FluentAssertions;
-using Moq;
+﻿using ArgosSharp.Application.Interfaces.Scrapers;
 using ArgosSharp.Application.UseCase.Scraper;
-using ArgosSharp.Application.StrategiesContext.Scraper;
 using ArgosSharp.Domain.ValueObjects;
+using FluentAssertions;
+using Moq;
 
-namespace ArgosSharp.Application.UnitTests.UseCase
+namespace ArgosSharp.Application.UnitTests.UseCase;
+
+public class ScraperContextTests
 {
-    public class ScraperProcessorTests
+    [Test]
+    public async Task GetNewsBySourceAsync_WhenSourceExists_ShouldReturnNewsFromThatSource()
     {
-        private Mock<IScraperStrategyContext> _contextMock;
-        private ScraperProcessor _processor;
-
-        [SetUp]
-        public void Setup()
+        // Arrange
+        var newsResults = new List<NewsArticle>
         {
-            _contextMock = new Mock<IScraperStrategyContext>();
-            _processor = new ScraperProcessor(_contextMock.Object);
-        }
+            new("Title 1", DateTime.UtcNow, 2025, "https://example.com/1", "summary", "caraguatatuba"),
+            new("Title 2", DateTime.UtcNow, 2025, "https://example.com/2", "summary", "caraguatatuba")
+        };
 
-        [Test]
-        public void GetNews_ShouldThrow_WhenSearchTermIsNullOrEmpty()
+        var newsScraper = new Mock<INewsArticlesScrapers>(MockBehavior.Strict);
+        newsScraper.SetupGet(x => x.Name).Returns("caraguatatuba");
+        newsScraper.Setup(x => x.ProcessScraperAsync("python", 1)).ReturnsAsync(newsResults);
+
+        var jobScraper = new Mock<IJobPostingsScrapers>(MockBehavior.Strict);
+        jobScraper.SetupGet(x => x.Name).Returns("other-source");
+        var sut = new ScraperContext([newsScraper.Object], [jobScraper.Object]);
+        var parameters = new JobParameters("python", ["caraguatatuba"], 1);
+
+        // Act
+        var result = await sut.GetNewsBySourceAsync(parameters);
+
+        // Assert
+        result.Should().BeEquivalentTo(newsResults);
+    }
+
+    [Test]
+    public async Task GetJobsBySourceAsync_WhenSourceExists_ShouldReturnJobsFromThatSource()
+    {
+        // Arrange
+        var jobResults = new List<JobPosting>
         {
-            Func<Task> act = async () => await _processor.GetNews("", 1, ["Caraguatatuba"]);
-            act.Should().ThrowAsync<ArgumentNullException>();
-        }
+            new("Developer", "https://example.com/job/1", "C# developer", "ubatuba"),
+            new("Analyst", "https://example.com/job/2", "Data analyst", "ubatuba")
+        };
 
-        [Test]
-        public void GetNews_ShouldThrow_WhenDepthIsNegative()
-        {
-            Func<Task> act = async () => await _processor.GetNews("teste", -1, ["Caraguatatuba"]);
-            act.Should().ThrowAsync<ArgumentNullException>();
-        }
+        var newsScraper = new Mock<INewsArticlesScrapers>(MockBehavior.Strict);
+        newsScraper.SetupGet(x => x.Name).Returns("other-news-source");
+        var jobScraper = new Mock<IJobPostingsScrapers>(MockBehavior.Strict);
+        jobScraper.SetupGet(x => x.Name).Returns("ubatuba");
+        jobScraper.Setup(x => x.ProcessScraperAsync("csharp", 1)).ReturnsAsync(jobResults);
 
-        [Test]
-        public async Task GetNews_ShouldCallContext_ForEachSource()
-        {
-            // Arrange
-            var sources = new[] { "Caraguatatuba", "Ubatuba" };
+        var sut = new ScraperContext([newsScraper.Object], [jobScraper.Object]);
+        var parameters = new JobParameters("csharp", ["ubatuba"], 1);
 
-            _contextMock
-                .Setup(c => c.GetNewsBySourceAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()))
-                .ReturnsAsync((string src, string term, int depth) =>
-                [
-                    CreateFakeResult(src)
-                ]);
+        // Act
+        var result = await sut.GetJobsBySourceAsync(parameters);
 
-            // Act
-            var result = await _processor.GetNews("teste", 1, sources);
-
-            // Assert
-            result.Should().HaveCount(2);
-            result[0].Title.Should().Contain("Caraguatatuba");
-            result[1].Title.Should().Contain("Ubatuba");
-
-            _contextMock.Verify(c => c.GetNewsBySourceAsync("Caraguatatuba", "teste", 1), Times.Once);
-            _contextMock.Verify(c => c.GetNewsBySourceAsync("Ubatuba", "teste", 1), Times.Once);
-        }
-
-        [Test]
-        public async Task GetNews_ShouldReturnEmptyList_WhenNoSources()
-        {
-            var result = await _processor.GetNews("teste", 1, []);
-            result.Should().BeEmpty();
-        }
-
-        private static News CreateFakeResult(string source) =>
-            new($"Fake result for {source}", DateTime.Now, DateTime.Now.Year, "Some link", "Some abstract", source);
+        // Assert
+        result.Should().BeEquivalentTo(jobResults);
     }
 }
